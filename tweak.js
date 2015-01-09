@@ -1,15 +1,22 @@
 var fs = require('fs');
-var DOMParser = require('xmldom').DOMParser;
+var xmldom = require('xmldom');
+var DOMParser = xmldom.DOMParser;
+var svgManipulator = require('./svgmanipulator');
 
 var tweakFile = function(fileName) {
 	if (fs.existsSync(fileName)) {
 		console.log('tweaking file ' + fileName);
 		
 		var xml = fs.readFileSync(fileName, { "encoding": "UTF-8" });
-//console.log('' + (typeof xml));		
 		var document = new DOMParser().parseFromString(xml);
 		
-		console.log(document.toString());
+		svgManipulator.processSvg(document);
+		
+//		console.log(document.toString());
+
+		var xs = new (xmldom.XMLSerializer)();
+        var documentAsString = xs.serializeToString(document);		
+		fs.writeFileSync("/tmp/sample.svg", documentAsString);
 		
 	} else {
 		console.log('file ' + fileName + ' does not exist');
