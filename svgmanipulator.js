@@ -52,7 +52,7 @@ var moveAllChildren = function(node, layers) {
 		} else if (child.tagName == 'g') {
 			var layer = findLayer(node, 'Text', layers);
 			layer.appendChild(child);
-		} else if (child.tagName == 'path' && isNoFill(child)) {
+		} else if (child.tagName == 'path' && isNoFill(child) && isLineCapRound(child)) {
 			var layer = findLayer(node, 'Roads', layers);
 			layer.appendChild(child);
 		} else if (isLandColour(child)) {
@@ -76,6 +76,10 @@ var isLandColour = function(element) {
 	return style != null && style.indexOf("fill:rgb(94.901961%,93.72549%,91.372549%)") >= 0;
 }
 
+var isLineCapRound = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("stroke-linecap:round") >= 0;
+}
 
 var isNoFill = function(element) {
 	var style = element.getAttribute("style");
