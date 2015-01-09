@@ -1,0 +1,9 @@
+{
+	"name": "openStreetMapSvgTweaker",
+	"description": "A utility to make the SVG more Inkscape-friendly",
+	"version": "0.0.1",
+	"private": true,
+	"dependencies": {
+        "xmldom": "*"
+	}
+}
