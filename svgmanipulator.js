@@ -27,7 +27,8 @@ exports.processSvg = function(svgDocument) {
 	svg.insertBefore(createLayer(svgDocument, "Land", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Roads", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Features", layers), firstElement);
-	svg.insertBefore(createLayer(svgDocument, "RoadLabels", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Road Labels", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Extras", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Text", layers), firstElement);
 	
 	moveAllChildren(firstElement, layers);
@@ -49,8 +50,14 @@ var moveAllChildren = function(node, layers) {
 		} else if (child.tagName == 'g' && isWhiteText(child)) {
 			var layer = findLayer(node, 'RoadLabels', layers);
 			layer.appendChild(child);
+		} else if (child.tagName == 'g' && isGreyText(child)) {
+			var layer = findLayer(node, 'Extras', layers);
+			layer.appendChild(child);
 		} else if (child.tagName == 'g') {
 			var layer = findLayer(node, 'Text', layers);
+			layer.appendChild(child);
+		} else if (child.tagName == 'path' && isNoFill(child) && isDashedLine(child)) {
+			var layer = findLayer(node, 'Extras', layers);
 			layer.appendChild(child);
 		} else if (child.tagName == 'path' && isNoFill(child) && isLineCapRound(child)) {
 			var layer = findLayer(node, 'Roads', layers);
@@ -71,9 +78,19 @@ var isWhiteText = function(element) {
 	return style != null && style.indexOf("100%,100%,100%") >= 0;
 }
 
+var isGreyText = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("rgb(26.666667%,26.666667%,26.666667%)") >= 0;
+}
+
 var isLandColour = function(element) {
 	var style = element.getAttribute("style");
 	return style != null && style.indexOf("fill:rgb(94.901961%,93.72549%,91.372549%)") >= 0;
+}
+
+var isDashedLine = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("stroke-dasharray:") >= 0;
 }
 
 var isLineCapRound = function(element) {
@@ -101,7 +118,7 @@ var createLayer = function(svgDocument, name, layers) {
 	var layer = svgDocument.createElement("g");
 	layer.setAttribute("inkscape:groupmode", "layer");
 	layer.setAttribute("inkscape:label", name);
-	layer.setAttribute("id", "layer" + name);
+	layer.setAttribute("id", "layer" + name.replace(' ', '', 'g'));
 	layers.push(layer);
 	return layer;
 }
