@@ -28,7 +28,7 @@ exports.processSvg = function(svgDocument) {
 	svg.insertBefore(createLayer(svgDocument, "Roads", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Features", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Road Labels", layers), firstElement);
-	svg.insertBefore(createLayer(svgDocument, "Extras", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Survey Line", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Text", layers), firstElement);
 	
 	moveAllChildren(firstElement, layers);
@@ -47,21 +47,34 @@ var moveAllChildren = function(node, layers) {
 			var layer = findLayer(node, 'Background', layers);
 			layer.appendChild(child);
 			isFirstChild = false;
-		} else if (child.tagName == 'g' && isWhiteText(child)) {
+		} else if (isRoadLabelText(child)) {
 			var layer = findLayer(node, 'RoadLabels', layers);
 			layer.appendChild(child);
 		} else if (child.tagName == 'g' && isGreyText(child)) {
-			var layer = findLayer(node, 'Extras', layers);
+			var layer = findLayer(node, 'SurveyLine', layers);
 			layer.appendChild(child);
 		} else if (child.tagName == 'g') {
 			var layer = findLayer(node, 'Text', layers);
 			layer.appendChild(child);
-		} else if (child.tagName == 'path' && isNoFill(child) && isDashedLine(child)) {
-			var layer = findLayer(node, 'Extras', layers);
+		} else if (isSurveyLine(child)) {
+			var layer = findLayer(node, 'SurveyLine', layers);
 			layer.appendChild(child);
 		} else if (child.tagName == 'path' && isNoFill(child) && isLineCapRound(child)) {
 			var layer = findLayer(node, 'Roads', layers);
 			layer.appendChild(child);
+		} else if (child.tagName == 'path' && isNoFill(child) && isWhiteStroke(child)) {
+			var layer = findLayer(node, 'Text', layers);
+			layer.appendChild(child);
+		} else if (isRoadLabelLozenge(child)) {
+			var layer = findLayer(node, 'RoadLabels', layers);
+			
+			var siblings = findSiblingElements(child, 3);
+			node.removeChild(siblings[1]);
+			node.removeChild(siblings[2]);
+			
+			layer.appendChild(child);
+			layer.appendChild(siblings[1]);
+			layer.appendChild(siblings[2]);
 		} else if (isLandColour(child)) {
 			var layer = findLayer(node, 'Land', layers);
 			layer.appendChild(child);
@@ -71,11 +84,57 @@ var moveAllChildren = function(node, layers) {
 		}
 	}
 
+	var parent = node.parentNode;
+	parent.removeChild(node);
+}
+
+var isRoadLabelText = function(child) {
+	return child.tagName == 'g' && isWhiteText(child);
+}
+
+var findSiblingElements = function(element, count) {
+	var siblings = [];
+	siblings.push(element);
+	var latest = element;
+	while (siblings.length < count && latest.nextSibling) {
+		if (latest.nextSibling.tagName) {
+			siblings.push(latest.nextSibling);
+		}
+		latest = latest.nextSibling;
+	}
+	return siblings;		
+}
+var isRoadLabelLozengeTrivialCheck = function(child) {
+	return child.tagName == 'path' && isNonZeroFillRule(child);
+}
+var isRoadLabelLozenge = function(child) {
+	if (isRoadLabelLozengeTrivialCheck(child)) {
+		var siblings = findSiblingElements(child, 4);
+		if (siblings.length < 4) {
+			return false;
+		} else {
+			return isRoadLabelLozengeTrivialCheck(siblings[0]) && 
+				isRoadLabelLozengeTrivialCheck(siblings[1]) &&
+				isRoadLabelLozengeTrivialCheck(siblings[2]) &&
+				isRoadLabelText(siblings[3]);
+		}
+	} else {
+		return false;
+	}
+}
+
+var isSurveyLine = function(child) {
+	return child.tagName == 'path' && isNoFill(child) && isDashedLine(child);
 }
 
 var isWhiteText = function(element) {
 	var style = element.getAttribute("style");
-	return style != null && style.indexOf("100%,100%,100%") >= 0;
+	return style != null && style.indexOf("fill:rgb(100%,100%,100%)") >= 0;
+}
+
+var isWhiteStroke = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("stroke:rgb(100%,100%,100%);") >= 0;
 }
 
 var isGreyText = function(element) {
@@ -91,6 +150,11 @@ var isLandColour = function(element) {
 var isDashedLine = function(element) {
 	var style = element.getAttribute("style");
 	return style != null && style.indexOf("stroke-dasharray:") >= 0;
+}
+
+var isNonZeroFillRule = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("stroke:none;fill-rule:nonzero;") >= 0;
 }
 
 var isLineCapRound = function(element) {
