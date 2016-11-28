@@ -25,8 +25,10 @@ exports.processSvg = function(svgDocument) {
 	
 	svg.insertBefore(createLayer(svgDocument, "Background", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Land", layers), firstElement);
-	svg.insertBefore(createLayer(svgDocument, "Roads", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Features", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "BusinessArea", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Wooded", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Roads", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Road Labels", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Survey Line", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Text", layers), firstElement);
@@ -62,10 +64,10 @@ var moveAllChildren = function(node, layers) {
 		} else if (child.tagName == 'path' && isNoFill(child) && isLineCapRound(child)) {
 			var layer = findLayer(node, 'Roads', layers);
 			layer.appendChild(child);
-		} else if (child.tagName == 'path' && isNoFill(child) && isWhiteStroke(child)) {
+		} else if (child.tagName == 'path' && isNoFill(child) && isWhiteStrokeText(child)) {
 			var layer = findLayer(node, 'Text', layers);
 			layer.appendChild(child);
-		} else if (isRoadLabelLozenge(child)) {
+		} else if (isRoadLabelLozenge(child) || isRoadLabelLozengeColor(child)) {
 			var layer = findLayer(node, 'RoadLabels', layers);
 			
 			var siblings = findSiblingElements(child, 3);
@@ -75,6 +77,12 @@ var moveAllChildren = function(node, layers) {
 			layer.appendChild(child);
 			layer.appendChild(siblings[1]);
 			layer.appendChild(siblings[2]);
+		} else if (isBusinessAreaColour(child)) {
+			var layer = findLayer(node, 'BusinessArea', layers);
+			layer.appendChild(child);
+		} else if (isWoodedColour(child)) {
+			var layer = findLayer(node, 'Wooded', layers);
+			layer.appendChild(child);
 		} else if (isLandColour(child)) {
 			var layer = findLayer(node, 'Land', layers);
 			layer.appendChild(child);
@@ -104,6 +112,13 @@ var findSiblingElements = function(element, count) {
 	}
 	return siblings;		
 }
+
+var isRoadLabelLozengeColor = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && (style.indexOf("fill:rgb(93.333333%,93.72549%,84.313725%)") >= 0
+		|| style.indexOf("fill:rgb(92.54902%,80.392157%,81.960784%)") >= 0
+		|| style.indexOf("fill:rgb(95.294118%,89.019608%,81.176471%)") >= 0);
+}
 var isRoadLabelLozengeTrivialCheck = function(child) {
 	return child.tagName == 'path' && isNonZeroFillRule(child);
 }
@@ -132,9 +147,10 @@ var isWhiteText = function(element) {
 	return style != null && style.indexOf("fill:rgb(100%,100%,100%)") >= 0;
 }
 
-var isWhiteStroke = function(element) {
+var isWhiteStrokeText = function(element) {
 	var style = element.getAttribute("style");
-	return style != null && style.indexOf("stroke:rgb(100%,100%,100%);") >= 0;
+	return style != null && style.indexOf("stroke:rgb(100%,100%,100%);") >= 0
+		&& style.indexOf("stroke-miterlimit:10") >= 0;
 }
 
 var isGreyText = function(element) {
@@ -145,6 +161,17 @@ var isGreyText = function(element) {
 var isLandColour = function(element) {
 	var style = element.getAttribute("style");
 	return style != null && style.indexOf("fill:rgb(94.901961%,93.72549%,91.372549%)") >= 0;
+}
+
+var isBusinessAreaColour = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("fill:rgb(92.156863%,85.882353%,90.980392%)") >= 0;
+}
+
+
+var isWoodedColour = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("fill:rgb(67.843137%,81.960784%,61.960784%)") >= 0;
 }
 
 var isDashedLine = function(element) {
