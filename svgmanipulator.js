@@ -27,10 +27,12 @@ exports.processSvg = function(svgDocument) {
 	svg.insertBefore(createLayer(svgDocument, "Land", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Features", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "BusinessArea", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Parks", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Wooded", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Roads", layers), firstElement);
-	svg.insertBefore(createLayer(svgDocument, "Road Labels", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Survey Line", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Borders", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Road Labels", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Text", layers), firstElement);
 	
 	moveAllChildren(firstElement, layers);
@@ -58,6 +60,9 @@ var moveAllChildren = function(node, layers) {
 		} else if (child.tagName == 'g') {
 			var layer = findLayer(node, 'Text', layers);
 			layer.appendChild(child);
+		} else if (isBorderColour(child)) {
+			var layer = findLayer(node, 'Borders', layers);
+			layer.appendChild(child);
 		} else if (isSurveyLine(child)) {
 			var layer = findLayer(node, 'SurveyLine', layers);
 			layer.appendChild(child);
@@ -79,6 +84,9 @@ var moveAllChildren = function(node, layers) {
 			layer.appendChild(siblings[2]);
 		} else if (isBusinessAreaColour(child)) {
 			var layer = findLayer(node, 'BusinessArea', layers);
+			layer.appendChild(child);
+		} else if (isParkColour(child)) {
+			var layer = findLayer(node, 'Parks', layers);
 			layer.appendChild(child);
 		} else if (isWoodedColour(child)) {
 			var layer = findLayer(node, 'Wooded', layers);
@@ -168,6 +176,15 @@ var isBusinessAreaColour = function(element) {
 	return style != null && style.indexOf("fill:rgb(92.156863%,85.882353%,90.980392%)") >= 0;
 }
 
+var isBorderColour  = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("stroke:rgb(67.45098%,27.45098%,67.45098%)") >= 0;
+}
+
+var isParkColour = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("fill:rgb(70.980392%,89.019608%,70.980392%)") >= 0;
+}
 
 var isWoodedColour = function(element) {
 	var style = element.getAttribute("style");
