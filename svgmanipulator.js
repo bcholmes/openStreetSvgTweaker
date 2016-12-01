@@ -7,7 +7,7 @@ var INKSCAPE_NS = "http://www.inkscape.org/namespaces/inkscape";
 //       problem
 
 
-exports.processSvg = function(svgDocument) {
+exports.processSvg = function(svgDocument, bw) {
 
 	var svg = svgDocument.documentElement;
 	svg.setAttributeNS('http://www.w3.org/2000/xmlns/', "xmlns:inkscape", INKSCAPE_NS);
@@ -23,23 +23,25 @@ exports.processSvg = function(svgDocument) {
 	
 	var layers = [];
 	
+	
 	svg.insertBefore(createLayer(svgDocument, "Background", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Land", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Features", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "BusinessArea", layers), firstElement);
-	svg.insertBefore(createLayer(svgDocument, "Parks", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "GreenSpace", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Wooded", layers), firstElement);
+	svg.insertBefore(createLayer(svgDocument, "Water", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Roads", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Survey Line", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Borders", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Road Labels", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Text", layers), firstElement);
 	
-	moveAllChildren(firstElement, layers);
+	moveAllChildren(firstElement, layers, bw);
 }
 
 
-var moveAllChildren = function(node, layers) {
+var moveAllChildren = function(node, layers, bw) {
 
 	var isFirstChild = true;
 	while (node.childNodes.length > 0) {
@@ -51,6 +53,9 @@ var moveAllChildren = function(node, layers) {
 			var layer = findLayer(node, 'Background', layers);
 			layer.appendChild(child);
 			isFirstChild = false;
+		} else if (isWaterColour(child)) {
+			var layer = findLayer(node, 'Water', layers);
+			layer.appendChild(convertColor(child, bw));
 		} else if (isRoadLabelText(child)) {
 			var layer = findLayer(node, 'RoadLabels', layers);
 			layer.appendChild(child);
@@ -62,7 +67,7 @@ var moveAllChildren = function(node, layers) {
 			layer.appendChild(child);
 		} else if (isBorderColour(child)) {
 			var layer = findLayer(node, 'Borders', layers);
-			layer.appendChild(child);
+			layer.appendChild(convertColor(child, bw));
 		} else if (isSurveyLine(child)) {
 			var layer = findLayer(node, 'SurveyLine', layers);
 			layer.appendChild(child);
@@ -84,24 +89,41 @@ var moveAllChildren = function(node, layers) {
 			layer.appendChild(siblings[2]);
 		} else if (isBusinessAreaColour(child)) {
 			var layer = findLayer(node, 'BusinessArea', layers);
-			layer.appendChild(child);
+			layer.appendChild(convertColor(child, bw));
 		} else if (isParkColour(child)) {
-			var layer = findLayer(node, 'Parks', layers);
-			layer.appendChild(child);
+			var layer = findLayer(node, 'GreenSpace', layers);
+			layer.appendChild(convertColor(child, bw));
 		} else if (isWoodedColour(child)) {
 			var layer = findLayer(node, 'Wooded', layers);
-			layer.appendChild(child);
+			layer.appendChild(convertColor(child, bw));
 		} else if (isLandColour(child)) {
 			var layer = findLayer(node, 'Land', layers);
-			layer.appendChild(child);
+			layer.appendChild(convertColor(child, bw));
 		} else {
 			var layer = findLayer(node, 'Features', layers);
-			layer.appendChild(child);
+			layer.appendChild(convertColor(child, bw));
 		}
 	}
 
 	var parent = node.parentNode;
 	parent.removeChild(node);
+}
+
+var convertColor = function(element, bw) {
+	if (bw) {
+		var style = element.getAttribute("style");
+		// land
+		style = style.replace('fill:rgb(94.901961%,93.72549%,91.372549%)', 'fill:#ffffff');
+		// border
+		style = style.replace('stroke:rgb(67.45098%,27.45098%,67.45098%)', 'stroke:#222222');
+		// water
+		style = style.replace('stroke:rgb(70.980392%,81.568627%,81.568627%)', 'stroke:#999999');
+		// park
+		style = style.replace("fill:rgb(78.431373%,98.039216%,80%)", 'fill:#f0f0f0');
+
+		element.setAttribute("style", style);
+	}
+	return element;
 }
 
 var isRoadLabelText = function(child) {
@@ -171,6 +193,11 @@ var isLandColour = function(element) {
 	return style != null && style.indexOf("fill:rgb(94.901961%,93.72549%,91.372549%)") >= 0;
 }
 
+var isWaterColour = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("stroke:rgb(70.980392%,81.568627%,81.568627%)") >= 0;
+}
+
 var isBusinessAreaColour = function(element) {
 	var style = element.getAttribute("style");
 	return style != null && style.indexOf("fill:rgb(92.156863%,85.882353%,90.980392%)") >= 0;
@@ -183,7 +210,8 @@ var isBorderColour  = function(element) {
 
 var isParkColour = function(element) {
 	var style = element.getAttribute("style");
-	return style != null && style.indexOf("fill:rgb(70.980392%,89.019608%,70.980392%)") >= 0;
+	return style != null && (style.indexOf("fill:rgb(70.980392%,89.019608%,70.980392%)") >= 0
+		|| style.indexOf("fill:rgb(78.431373%,98.039216%,80%)") >= 0);
 }
 
 var isWoodedColour = function(element) {

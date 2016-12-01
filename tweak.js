@@ -3,14 +3,14 @@ var xmldom = require('xmldom');
 var DOMParser = xmldom.DOMParser;
 var svgManipulator = require('./svgmanipulator');
 
-var tweakFile = function(fileName, output) {
+var tweakFile = function(fileName, output, bw) {
 	if (fs.existsSync(fileName)) {
 		console.log('tweaking file ' + fileName);
 		
 		var xml = fs.readFileSync(fileName, { "encoding": "UTF-8" });
 		var document = new DOMParser().parseFromString(xml);
 		
-		svgManipulator.processSvg(document);
+		svgManipulator.processSvg(document, bw);
 		
 //		console.log(document.toString());
 
@@ -33,7 +33,7 @@ if (!output) {
 
 var happened = false;
 argv["_"].forEach(function (val, index, array) {
-	tweakFile(val, output);
+	tweakFile(val, output, argv['g'] == true);
 	happened = true;
 });	
 
