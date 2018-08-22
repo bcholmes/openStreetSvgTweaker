@@ -2,16 +2,22 @@ var SVG_NS = "http://www.w3.org/2000/svg";
 var INKSCAPE_NS = "http://www.inkscape.org/namespaces/inkscape";
 
 
-// Note: it seems like I'm forced to use namespaces the wrong way in 
-//       order to get the correct output. Seems like an implementation 
+// Note: it seems like I'm forced to use namespaces the wrong way in
+//       order to get the correct output. Seems like an implementation
 //       problem
 
+
+const WATER2 = "fill:rgb(66.666667%,82.745098%,87.45098%)";
+const WATER2_STROKE = "stroke:rgb(66.666667%,82.745098%,87.45098%)";
+const WOODED2 = "fill:rgb(67.843137%,81.960784%,61.960784%)";
+const ROAD_STROKE3 = "stroke:rgb(62.745098%,41.960784%,0%)";
+const ROAD_STROKE4 = "stroke:rgb(43.921569%,49.019608%,1.960784%)";
 
 exports.processSvg = function(svgDocument, bw) {
 
 	var svg = svgDocument.documentElement;
 	svg.setAttributeNS('http://www.w3.org/2000/xmlns/', "xmlns:inkscape", INKSCAPE_NS);
-	
+
 	var firstElement = null;
 	var children = svg.childNodes;
 	for (var i = 0; i < children.length; i++) {
@@ -20,10 +26,10 @@ exports.processSvg = function(svgDocument, bw) {
 			break;
 		}
 	}
-	
+
 	var layers = [];
-	
-	
+
+
 	svg.insertBefore(createLayer(svgDocument, "Background", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Land", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Features", layers), firstElement);
@@ -36,7 +42,7 @@ exports.processSvg = function(svgDocument, bw) {
 	svg.insertBefore(createLayer(svgDocument, "Borders", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Road Labels", layers), firstElement);
 	svg.insertBefore(createLayer(svgDocument, "Text", layers), firstElement);
-	
+
 	moveAllChildren(firstElement, layers, bw);
 }
 
@@ -58,11 +64,17 @@ var moveAllChildren = function(node, layers, bw) {
 			layer.appendChild(convertColor(child, bw));
 		} else if (isRoadLabelText(child)) {
 			var layer = findLayer(node, 'RoadLabels', layers);
-			layer.appendChild(child);
+			layer.appendChild(convertColor(child, bw));
 		} else if (child.tagName == 'g' && isGreyText(child)) {
 			var layer = findLayer(node, 'SurveyLine', layers);
 			layer.appendChild(child);
 		} else if (child.tagName == 'g') {
+			var layer = findLayer(node, 'Text', layers);
+			layer.appendChild(child);
+		} else if (child.tagName == 'path' && isRoad(child)) {
+			var layer = findLayer(node, 'Roads', layers);
+			layer.appendChild(convertColor(child, bw));
+		} else if (child.tagName == 'path' && isNoFill(child) && isWhiteStrokeText(child)) {
 			var layer = findLayer(node, 'Text', layers);
 			layer.appendChild(child);
 		} else if (isBorderColour(child)) {
@@ -71,22 +83,15 @@ var moveAllChildren = function(node, layers, bw) {
 		} else if (isSurveyLine(child)) {
 			var layer = findLayer(node, 'SurveyLine', layers);
 			layer.appendChild(child);
-		} else if (child.tagName == 'path' && isNoFill(child) && isLineCapRound(child)) {
-			var layer = findLayer(node, 'Roads', layers);
-			layer.appendChild(child);
-		} else if (child.tagName == 'path' && isNoFill(child) && isWhiteStrokeText(child)) {
-			var layer = findLayer(node, 'Text', layers);
-			layer.appendChild(child);
 		} else if (isRoadLabelLozenge(child) || isRoadLabelLozengeColor(child)) {
 			var layer = findLayer(node, 'RoadLabels', layers);
-			
-			var siblings = findSiblingElements(child, 3);
-			node.removeChild(siblings[1]);
-			node.removeChild(siblings[2]);
-			
-			layer.appendChild(child);
-			layer.appendChild(siblings[1]);
-			layer.appendChild(siblings[2]);
+
+			var siblings = findTextSiblings(child);
+			layer.appendChild(convertColor(child, bw));
+			for (var i = 0; i < siblings.length; i++) {
+				node.removeChild(siblings[i]);
+				layer.appendChild(convertColor(siblings[i], bw));
+			}
 		} else if (isBusinessAreaColour(child)) {
 			var layer = findLayer(node, 'BusinessArea', layers);
 			layer.appendChild(convertColor(child, bw));
@@ -115,15 +120,46 @@ var convertColor = function(element, bw) {
 		// land
 		style = style.replace('fill:rgb(94.901961%,93.72549%,91.372549%)', 'fill:#ffffff');
 		// border
-		style = style.replace('stroke:rgb(67.45098%,27.45098%,67.45098%)', 'stroke:#222222');
+		style = style.replace('stroke:rgb(67.45098%,27.45098%,67.45098%)', 'stroke:#333333');
 		// water
-		style = style.replace('stroke:rgb(70.980392%,81.568627%,81.568627%)', 'stroke:#999999');
+		style = style.replace(WATER2, 'fill:#cccccc');
+		style = style.replace(WATER2_STROKE, 'stroke:#cccccc');
+		style = style.replace('stroke:rgb(70.980392%,81.568627%,81.568627%)', 'stroke:#cccccc');
+		style = style.replace('fill:rgb(70.980392%,81.568627%,81.568627%)', 'fill:#cccccc');
 		// park
 		style = style.replace("fill:rgb(78.431373%,98.039216%,80%)", 'fill:#f0f0f0');
+
+		// road text
+
+		style = style.replace("fill:rgb(38.431373%,2.745098%,15.686275%)", 'fill:#333333');
+		// road
+		if (isRoad(element)) {
+			style = style.replace('stroke:rgb(73.333333%,73.333333%,73.333333%)', 'stroke:#000000');
+			style = style.replace('stroke:rgb(96.862745%,98.039216%,74.901961%)', 'stroke:#aaaaaa');
+			style = style.replace('stroke:rgb(56.078431%,56.078431%,56.078431%)', 'stroke:#000000');
+			style = style.replace('stroke:rgb(61.960784%,68.235294%,13.72549%)', 'stroke:#000000');
+			style = style.replace('stroke:rgb(100%,100%,100%)', 'stroke:#aaaaaa');
+			style = style.replace('stroke:rgb(98.823529%,83.921569%,64.313725%)', 'stroke:#aaaaaa');
+			style = style.replace('stroke:rgb(76.470588%,54.117647%,15.294118%)', 'stroke:#000000');
+			style = style.replace('stroke:rgb(90.980392%,57.254902%,63.529412%)', 'stroke:#aaaaaa');
+			style = style.replace('stroke:rgb(76.078431%,30.588235%,41.960784%)', 'stroke:#000000');
+			style = style.replace(ROAD_STROKE3, 'stroke:#000000');
+			style = style.replace(ROAD_STROKE4, 'stroke:#000000');
+		}
+
+		if (isRoadLabelLozengeColor(element)) {
+			style = 'fill-rule:nonzero;fill:#e0e0e0;fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke:#999999;stroke-opacity:1;stroke-miterlimit:4;'
+		}
+
+		style = style.replace(WOODED2, 'fill:#e0e0e0');
 
 		element.setAttribute("style", style);
 	}
 	return element;
+}
+
+var isRoad = function(child) {
+	return child.tagName == 'path' && ((isNoFill(child) && isLineCapRound(child)) || isRoadColour(child));
 }
 
 var isRoadLabelText = function(child) {
@@ -140,7 +176,21 @@ var findSiblingElements = function(element, count) {
 		}
 		latest = latest.nextSibling;
 	}
-	return siblings;		
+	return siblings;
+}
+
+var findTextSiblings = function(element) {
+	var siblings = [];
+	var latest = element;
+	while (latest.nextSibling) {
+		if (latest.nextSibling.tagName && latest.nextSibling.tagName == 'g') {
+			siblings.push(latest.nextSibling);
+		} else if (latest.nextSibling.tagName) {
+			break;
+		}
+		latest = latest.nextSibling;
+	}
+	return siblings;
 }
 
 var isRoadLabelLozengeColor = function(element) {
@@ -158,7 +208,7 @@ var isRoadLabelLozenge = function(child) {
 		if (siblings.length < 4) {
 			return false;
 		} else {
-			return isRoadLabelLozengeTrivialCheck(siblings[0]) && 
+			return isRoadLabelLozengeTrivialCheck(siblings[0]) &&
 				isRoadLabelLozengeTrivialCheck(siblings[1]) &&
 				isRoadLabelLozengeTrivialCheck(siblings[2]) &&
 				isRoadLabelText(siblings[3]);
@@ -176,6 +226,13 @@ var isWhiteText = function(element) {
 	var style = element.getAttribute("style");
 	return style != null && style.indexOf("fill:rgb(100%,100%,100%)") >= 0;
 }
+
+
+var isRoadColour = function(element) {
+	var style = element.getAttribute("style");
+	return style != null && style.indexOf("stroke:rgb(73.333333%,73.333333%,73.333333%);") >= 0;
+}
+
 
 var isWhiteStrokeText = function(element) {
 	var style = element.getAttribute("style");
@@ -195,7 +252,10 @@ var isLandColour = function(element) {
 
 var isWaterColour = function(element) {
 	var style = element.getAttribute("style");
-	return style != null && style.indexOf("stroke:rgb(70.980392%,81.568627%,81.568627%)") >= 0;
+	return style != null && (style.indexOf("stroke:rgb(70.980392%,81.568627%,81.568627%)") >= 0 ||
+	  style.indexOf(WATER2_STROKE) >= 0 ||
+		style.indexOf("fill:rgb(70.980392%,81.568627%,81.568627%)") >= 0 ||
+		style.indexOf(WATER2) >= 0);
 }
 
 var isBusinessAreaColour = function(element) {
@@ -205,7 +265,8 @@ var isBusinessAreaColour = function(element) {
 
 var isBorderColour  = function(element) {
 	var style = element.getAttribute("style");
-	return style != null && style.indexOf("stroke:rgb(67.45098%,27.45098%,67.45098%)") >= 0;
+	return style != null && (style.indexOf("stroke:rgb(67.45098%,27.45098%,67.45098%)") >= 0 ||
+		style.indexOf("stroke:rgb(100%,100%,100%)") >= 0);
 }
 
 var isParkColour = function(element) {
@@ -216,7 +277,8 @@ var isParkColour = function(element) {
 
 var isWoodedColour = function(element) {
 	var style = element.getAttribute("style");
-	return style != null && style.indexOf("fill:rgb(67.843137%,81.960784%,61.960784%)") >= 0;
+	return style != null && (style.indexOf(WOODED2) >= 0 ||
+		style.indexOf("fill:url(#pattern") >= 0);
 }
 
 var isDashedLine = function(element) {
